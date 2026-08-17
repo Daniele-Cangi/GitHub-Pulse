@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+
+# Dati raccolti localmente dalla dashboard
+data/*.sqlite3
+data/*.sqlite3-*
+
+# File temporanei del sistema operativo
+.DS_Store
+Thumbs.db
