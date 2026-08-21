@@ -68,6 +68,90 @@ class SignalTests(unittest.TestCase):
         self.assertIsNone(app.percentage_change(5, 0))
 
 
+class OpportunityTests(unittest.TestCase):
+    def test_finds_foundation_conversion_and_developer_experience_opportunities(
+        self,
+    ) -> None:
+        repositories = [
+            {
+                "full_name": "octocat/hello-world",
+                "name": "hello-world",
+                "private": False,
+                "archived": False,
+                "fork": False,
+                "html_url": "https://github.com/octocat/hello-world",
+                "description": "",
+                "homepage": "",
+                "topics": [],
+                "license": "",
+                "pushed_at": app.utc_now(),
+            }
+        ]
+        signals = [
+            {
+                "repo": "octocat/hello-world",
+                "unique_views_7d": 24,
+                "previous_unique_views": 12,
+                "unique_clones_7d": 10,
+                "stars_delta": 0,
+                "intent_rate": 90.0,
+            }
+        ]
+
+        opportunities, health = app.analyze_opportunities(repositories, signals)
+
+        self.assertEqual(health[0]["repo"], "octocat/hello-world")
+        self.assertLess(health[0]["score"], 100)
+        self.assertTrue(
+            {"foundation", "conversion", "developer_experience"}.issubset(
+                {item["kind"] for item in opportunities}
+            )
+        )
+
+    def test_builds_markdown_digest(self) -> None:
+        signals = {
+            "totals": {
+                "unique_views_7d": 42,
+                "unique_clones_7d": 12,
+                "stars_delta": 3,
+                "forks_delta": 1,
+            },
+            "relationship_delta": {"followers": 2},
+            "repository_ranking": [
+                {
+                    "name": "hello-world",
+                    "unique_views_7d": 24,
+                    "unique_clones_7d": 10,
+                    "signal_score": 88,
+                }
+            ],
+            "notifications": [
+                {"title": "Traffic spike", "detail": "24 unique visitors"}
+            ],
+        }
+        center = {
+            "opportunities": [
+                {
+                    "title": "Improve the README",
+                    "action": "Add a quick start.",
+                    "metric": "24 visitors",
+                }
+            ]
+        }
+
+        digest = app.build_digest_markdown(
+            "octocat",
+            signals,
+            center,
+            generated_at="2026-08-21T12:00:00+00:00",
+        )
+
+        self.assertIn("# GitHub Pulse Weekly Digest", digest)
+        self.assertIn("@octocat", digest)
+        self.assertIn("Improve the README", digest)
+        self.assertIn("Traffic spike", digest)
+
+
 class PersistenceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()

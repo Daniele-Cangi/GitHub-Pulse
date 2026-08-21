@@ -76,7 +76,7 @@ def utc_now() -> str:
 
 def account_database_path(login: str, data_dir: Path | None = None) -> Path:
     if not LOGIN_PATTERN.fullmatch(login):
-        raise GitHubCLIError("GitHub CLI ha restituito un nome account non valido.")
+        raise GitHubCLIError("GitHub CLI returned an invalid account name.")
     root = data_dir or DATA_DIR
     return root / f"github-pulse-{login.casefold()}.sqlite3"
 
@@ -142,19 +142,19 @@ def run_gh_json(
         )
     except FileNotFoundError as exc:
         raise GitHubCLIError(
-            "GitHub CLI (gh) non è installata o non è disponibile nel PATH."
+            "GitHub CLI (gh) is not installed or is not available in PATH."
         ) from exc
     except subprocess.TimeoutExpired as exc:
-        raise GitHubCLIError("GitHub non ha risposto entro il tempo previsto.") from exc
+        raise GitHubCLIError("GitHub did not respond before the request timed out.") from exc
 
     if result.returncode != 0:
-        detail = (result.stderr or result.stdout or "Errore GitHub CLI").strip()
+        detail = (result.stderr or result.stdout or "GitHub CLI error").strip()
         raise GitHubCLIError(detail)
 
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
-        raise GitHubCLIError("GitHub CLI ha restituito una risposta non valida.") from exc
+        raise GitHubCLIError("GitHub CLI returned an invalid response.") from exc
 
     if paginate:
         if not isinstance(payload, list):
@@ -176,7 +176,7 @@ def get_account_login() -> str:
     login = str(profile.get("login") or "")
     if not login:
         raise GitHubCLIError(
-            "Impossibile determinare l’account autenticato in GitHub CLI."
+            "Unable to determine the account authenticated in GitHub CLI."
         )
     return configure_account(login)
 
@@ -535,6 +535,19 @@ def build_dashboard(*, force: bool = False) -> dict[str, Any]:
             "fork": bool(repo.get("fork")),
             "html_url": repo.get("html_url", ""),
             "description": repo.get("description") or "",
+            "homepage": repo.get("homepage") or "",
+            "topics": [
+                str(topic)
+                for topic in (repo.get("topics") or [])
+                if isinstance(topic, str)
+            ],
+            "license": (
+                (repo.get("license") or {}).get("spdx_id")
+                if isinstance(repo.get("license"), dict)
+                else ""
+            )
+            or "",
+            "default_branch": repo.get("default_branch") or "main",
             "updated_at": repo.get("updated_at", ""),
             "pushed_at": repo.get("pushed_at", ""),
             "language": repo.get("language") or "",
@@ -574,10 +587,10 @@ def build_dashboard(*, force: bool = False) -> dict[str, Any]:
 
 def validate_repo(repo: str) -> str:
     if not REPO_PATTERN.fullmatch(repo):
-        raise ValueError("Nome repository non valido.")
+        raise ValueError("Invalid repository name.")
     owner, name = repo.split("/", 1)
     if owner in {".", ".."} or name in {".", ".."}:
-        raise ValueError("Nome repository non valido.")
+        raise ValueError("Invalid repository name.")
     return repo
 
 
@@ -752,6 +765,336 @@ def get_repository_signal_rows() -> list[dict[str, Any]]:
     return rows
 
 
+def days_since_timestamp(value: str, *, now: datetime | None = None) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    reference = now or datetime.now(timezone.utc)
+    return max(0, (reference - parsed.astimezone(timezone.utc)).days)
+
+
+def repository_health(repo: dict[str, Any]) -> dict[str, Any]:
+    score = 100
+    gaps: list[str] = []
+
+    if not str(repo.get("description") or "").strip():
+        score -= 20
+        gaps.append("description")
+    if len(repo.get("topics") or []) < 2:
+        score -= 15
+        gaps.append("topics")
+    license_id = str(repo.get("license") or "")
+    if not repo.get("private") and license_id in {"", "NOASSERTION"}:
+        score -= 20
+        gaps.append("license")
+    if not str(repo.get("homepage") or "").strip():
+        score -= 5
+        gaps.append("homepage")
+
+    pushed_days_ago = days_since_timestamp(str(repo.get("pushed_at") or ""))
+    if pushed_days_ago is None:
+        score -= 10
+        gaps.append("recent activity")
+    elif pushed_days_ago > 180:
+        score -= 20
+        gaps.append("recent activity")
+    elif pushed_days_ago > 90:
+        score -= 10
+        gaps.append("recent activity")
+
+    return {
+        "score": max(0, score),
+        "gaps": gaps,
+        "pushed_days_ago": pushed_days_ago,
+    }
+
+
+def analyze_opportunities(
+    repositories: list[dict[str, Any]],
+    signal_rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    signals = {str(row["repo"]).casefold(): row for row in signal_rows}
+    opportunities: list[dict[str, Any]] = []
+    health_rows: list[dict[str, Any]] = []
+    priority_rank = {"high": 3, "medium": 2, "low": 1}
+
+    for repo in repositories:
+        full_name = str(repo.get("full_name") or "")
+        if not full_name or repo.get("archived") or repo.get("fork"):
+            continue
+        signal = signals.get(full_name.casefold(), {})
+        health = repository_health(repo)
+        health_rows.append(
+            {
+                "repo": full_name,
+                "name": repo.get("name") or full_name.split("/", 1)[-1],
+                "score": health["score"],
+                "gaps": health["gaps"],
+                "url": repo.get("html_url") or f"https://github.com/{full_name}",
+            }
+        )
+
+        repo_name = str(repo.get("name") or full_name.split("/", 1)[-1])
+        repo_url = str(repo.get("html_url") or f"https://github.com/{full_name}")
+        unique_views = int(signal.get("unique_views_7d") or 0)
+        unique_clones = int(signal.get("unique_clones_7d") or 0)
+        star_delta = int(signal.get("stars_delta") or 0)
+        previous_views = int(signal.get("previous_unique_views") or 0)
+        intent_rate = signal.get("intent_rate")
+        growth = percentage_change(unique_views, previous_views)
+
+        essential_gaps = [
+            gap for gap in health["gaps"] if gap in {"description", "topics", "license"}
+        ]
+        if essential_gaps:
+            missing = ", ".join(essential_gaps)
+            opportunities.append(
+                {
+                    "kind": "foundation",
+                    "priority": "high" if "license" in essential_gaps else "medium",
+                    "repo": full_name,
+                    "title": f"Complete {repo_name}'s essentials",
+                    "detail": f"Missing or weak repository metadata: {missing}.",
+                    "action": "Add the missing metadata so visitors understand and trust the project faster.",
+                    "metric": f"Health {health['score']}/100",
+                    "score": 95 - health["score"],
+                    "url": repo_url,
+                }
+            )
+
+        if unique_views >= 10 and star_delta <= 0:
+            opportunities.append(
+                {
+                    "kind": "conversion",
+                    "priority": "high" if unique_views >= 20 else "medium",
+                    "repo": full_name,
+                    "title": f"Turn {repo_name}'s attention into validation",
+                    "detail": f"{unique_views} unique visitors arrived this week without a new star.",
+                    "action": "Sharpen the README opening, demo and primary call to action.",
+                    "metric": f"{unique_views} visitors · {star_delta:+d} stars",
+                    "score": 70 + min(unique_views, 30),
+                    "url": repo_url,
+                }
+            )
+
+        if unique_clones >= 5 and (intent_rate or 0) >= 80:
+            opportunities.append(
+                {
+                    "kind": "developer_experience",
+                    "priority": "medium",
+                    "repo": full_name,
+                    "title": f"Make {repo_name} easier to evaluate",
+                    "detail": f"{unique_clones} unique cloners show strong hands-on intent.",
+                    "action": "Add a quick start, expected output and a minimal runnable example.",
+                    "metric": f"{intent_rate:g}% clone intent",
+                    "score": 55 + min(unique_clones, 30),
+                    "url": repo_url,
+                }
+            )
+
+        is_new_traffic = growth is None and unique_views >= 5
+        if is_new_traffic or (growth is not None and growth >= 50 and unique_views >= 5):
+            growth_label = "new traffic" if growth is None else f"+{growth:g}% traffic"
+            opportunities.append(
+                {
+                    "kind": "momentum",
+                    "priority": "low",
+                    "repo": full_name,
+                    "title": f"Capture {repo_name}'s momentum",
+                    "detail": f"{growth_label} is creating a short window for discovery.",
+                    "action": "Publish a small release or update while attention is elevated.",
+                    "metric": f"{unique_views} visitors · {growth_label}",
+                    "score": 40 + min(unique_views, 30),
+                    "url": repo_url,
+                }
+            )
+
+        pushed_days_ago = health["pushed_days_ago"]
+        if pushed_days_ago is not None and pushed_days_ago > 120 and unique_views >= 3:
+            opportunities.append(
+                {
+                    "kind": "freshness",
+                    "priority": "medium",
+                    "repo": full_name,
+                    "title": f"Refresh {repo_name} while people still visit",
+                    "detail": f"The repository still attracts traffic but was last pushed {pushed_days_ago} days ago.",
+                    "action": "Confirm compatibility, refresh examples and publish maintenance notes.",
+                    "metric": f"{unique_views} visitors · {pushed_days_ago}d since push",
+                    "score": 60 + min(unique_views, 20),
+                    "url": repo_url,
+                }
+            )
+
+    opportunities.sort(
+        key=lambda item: (priority_rank[item["priority"]], int(item["score"])),
+        reverse=True,
+    )
+    health_rows.sort(key=lambda item: (int(item["score"]), str(item["name"]).casefold()))
+    return opportunities, health_rows
+
+
+def build_opportunity_center(*, force: bool = False) -> dict[str, Any]:
+    cached = None if force else CACHE.get("opportunities", 120)
+    if cached is not None:
+        return cached
+    dashboard = build_dashboard()
+    repositories = get_repository_signal_rows()
+    opportunities, health = analyze_opportunities(
+        dashboard["repositories"], repositories
+    )
+    average_health = (
+        round(sum(int(item["score"]) for item in health) / len(health))
+        if health
+        else 0
+    )
+    payload = {
+        "generated_at": utc_now(),
+        "summary": {
+            "total": len(opportunities),
+            "high": sum(1 for item in opportunities if item["priority"] == "high"),
+            "medium": sum(
+                1 for item in opportunities if item["priority"] == "medium"
+            ),
+            "health_average": average_health,
+            "repositories_analyzed": len(health),
+        },
+        "opportunities": opportunities[:40],
+        "health": health,
+        "repositories": [
+            {"repo": row["repo"], "name": row["name"]}
+            for row in repositories
+            if not row["archived"]
+        ],
+    }
+    CACHE.set("opportunities", payload)
+    return payload
+
+
+def build_repository_comparison(selected_repos: list[str]) -> dict[str, Any]:
+    selected: list[str] = []
+    seen: set[str] = set()
+    for value in selected_repos:
+        repo = validate_repo(value.strip())
+        key = repo.casefold()
+        if key not in seen:
+            selected.append(repo)
+            seen.add(key)
+    if not 2 <= len(selected) <= 4:
+        raise ValueError("Choose between 2 and 4 different repositories.")
+
+    available = {
+        str(row["repo"]).casefold(): row for row in get_repository_signal_rows()
+    }
+    items: list[dict[str, Any]] = []
+    for requested in selected:
+        row = available.get(requested.casefold())
+        if row is None:
+            raise ValueError(f"Repository is not available for comparison: {requested}")
+        unique_views = int(row["unique_views_7d"])
+        star_delta = int(row["stars_delta"])
+        item = dict(row)
+        item.update(
+            {
+                "visitor_growth": percentage_change(
+                    unique_views, int(row["previous_unique_views"])
+                ),
+                "validation_rate": round((star_delta / unique_views) * 100, 1)
+                if unique_views
+                else None,
+                "history": get_traffic_history(str(row["repo"]))[-30:],
+            }
+        )
+        items.append(item)
+    return {"generated_at": utc_now(), "repositories": items}
+
+
+def build_digest_markdown(
+    account: str,
+    signals: dict[str, Any],
+    opportunity_center: dict[str, Any],
+    *,
+    generated_at: str | None = None,
+) -> str:
+    reference = datetime.fromisoformat((generated_at or utc_now()).replace("Z", "+00:00"))
+    period_end = reference.date()
+    period_start = period_end - timedelta(days=6)
+    totals = signals["totals"]
+    relationship_delta = signals.get("relationship_delta") or {}
+    lines = [
+        "# GitHub Pulse Weekly Digest",
+        "",
+        f"**Account:** @{account}",
+        f"**Period:** {period_start.isoformat()} to {period_end.isoformat()}",
+        "",
+        "## This week",
+        "",
+        f"- {totals['unique_views_7d']} unique visitors across tracked repositories",
+        f"- {totals['unique_clones_7d']} unique cloners",
+        f"- {totals['stars_delta']:+d} stars and {totals['forks_delta']:+d} forks",
+        f"- {int(relationship_delta.get('followers', 0)):+d} followers",
+        "",
+        "## Top repositories",
+        "",
+    ]
+    for row in signals["repository_ranking"][:5]:
+        lines.append(
+            f"- **{row['name']}** — {row['unique_views_7d']} visitors, "
+            f"{row['unique_clones_7d']} cloners, pulse {row['signal_score']}"
+        )
+    if not signals["repository_ranking"]:
+        lines.append("- No repository traffic collected yet.")
+
+    lines.extend(["", "## Opportunities", ""])
+    opportunities = opportunity_center["opportunities"][:5]
+    for item in opportunities:
+        lines.append(
+            f"- **{item['title']}** — {item['action']} ({item['metric']})"
+        )
+    if not opportunities:
+        lines.append("- No urgent opportunities detected.")
+
+    lines.extend(["", "## Alerts", ""])
+    notifications = signals["notifications"][:5]
+    for item in notifications:
+        lines.append(f"- **{item['title']}** — {item['detail']}")
+    if not notifications:
+        lines.append("- No important alerts this week.")
+
+    lines.extend(["", "---", "Generated locally by GitHub Pulse.", ""])
+    return "\n".join(lines)
+
+
+def build_weekly_digest(*, force: bool = False) -> dict[str, Any]:
+    generated_at = utc_now()
+    signals = build_signals()
+    opportunity_center = build_opportunity_center(force=force)
+    markdown = build_digest_markdown(
+        get_account_login(),
+        signals,
+        opportunity_center,
+        generated_at=generated_at,
+    )
+    reference = datetime.fromisoformat(generated_at)
+    return {
+        "generated_at": generated_at,
+        "period": {
+            "from": (reference.date() - timedelta(days=6)).isoformat(),
+            "to": reference.date().isoformat(),
+        },
+        "totals": signals["totals"],
+        "relationship_delta": signals["relationship_delta"],
+        "top_repositories": signals["repository_ranking"][:5],
+        "opportunities": opportunity_center["opportunities"][:5],
+        "alerts": signals["notifications"][:5],
+        "markdown": markdown,
+    }
+
+
 def get_latest_relation_counts() -> tuple[dict[str, int], dict[str, int]]:
     with database_connection() as connection:
         connection.row_factory = sqlite3.Row
@@ -850,27 +1193,27 @@ def build_signals() -> dict[str, Any]:
     cards = [
         {
             "key": "reach",
-            "label": "Copertura",
+            "label": "Reach",
             "value": totals["unique_views_7d"],
-            "unit": "visitatori unici · 7g",
+            "unit": "unique visitors · 7d",
             "delta": percentage_change(
                 totals["unique_views_7d"], totals["previous_unique_views"]
             ),
         },
         {
             "key": "intent",
-            "label": "Interesse",
+            "label": "Intent",
             "value": totals["unique_clones_7d"],
-            "unit": "cloner unici · 7g",
+            "unit": "unique cloners · 7d",
             "delta": percentage_change(
                 totals["unique_clones_7d"], totals["previous_unique_clones"]
             ),
         },
         {
             "key": "validation",
-            "label": "Validazione",
+            "label": "Validation",
             "value": totals["stars"],
-            "unit": "stelle totali",
+            "unit": "total stars",
             "delta_absolute": totals["stars_delta"],
         },
         {
@@ -884,13 +1227,13 @@ def build_signals() -> dict[str, Any]:
 
     notifications: list[dict[str, Any]] = []
     movement_copy = {
-        "new_follower": ("Nuovo follower", "positive"),
-        "lost_follower": ("Non ti segue più", "warning"),
-        "started_following": ("Hai iniziato a seguire", "info"),
-        "stopped_following": ("Hai smesso di seguire", "info"),
+        "new_follower": ("New follower", "positive"),
+        "lost_follower": ("No longer follows you", "warning"),
+        "started_following": ("You started following", "info"),
+        "stopped_following": ("You stopped following", "info"),
     }
     for movement in movements[:8]:
-        title, tone = movement_copy.get(movement["event_type"], ("Movimento rete", "info"))
+        title, tone = movement_copy.get(movement["event_type"], ("Network change", "info"))
         notifications.append(
             {
                 "type": movement["event_type"],
@@ -908,15 +1251,15 @@ def build_signals() -> dict[str, Any]:
         if current >= 5 and current >= max(3, previous * 1.5):
             change = percentage_change(current, previous)
             detail = (
-                f"{current} visitatori unici · +{change:g}%"
+                f"{current} unique visitors · +{change:g}%"
                 if change is not None
-                else f"{current} visitatori unici · nuovo traffico"
+                else f"{current} unique visitors · new traffic"
             )
             notifications.append(
                 {
                     "type": "traffic_spike",
                     "tone": "positive",
-                    "title": f'Picco su {repo["name"]}',
+                    "title": f'Traffic spike on {repo["name"]}',
                     "detail": detail,
                     "occurred_at": repo["traffic_collected_at"],
                     "url": f'https://github.com/{repo["repo"]}',
@@ -927,8 +1270,8 @@ def build_signals() -> dict[str, Any]:
                 {
                     "type": "new_stars",
                     "tone": "positive",
-                    "title": f'Nuove stelle su {repo["name"]}',
-                    "detail": f'+{repo["stars_delta"]} negli ultimi 7 giorni',
+                    "title": f'New stars on {repo["name"]}',
+                    "detail": f'+{repo["stars_delta"]} in the last 7 days',
                     "occurred_at": repo["traffic_collected_at"],
                     "url": f'https://github.com/{repo["repo"]}/stargazers',
                 }
@@ -995,8 +1338,8 @@ def build_traffic(repo: str, *, force: bool = False) -> dict[str, Any]:
 
     if len(errors) == len(endpoints):
         raise GitHubCLIError(
-            "Impossibile leggere il traffico. Verifica di avere accesso in scrittura "
-            "al repository e che il token GitHub CLI includa l’accesso al repository."
+            "Unable to read repository traffic. Make sure you have push access and "
+            "that the GitHub CLI token can access the repository."
         )
 
     save_traffic(repo, data["views"], data["clones"])
@@ -1054,22 +1397,22 @@ def normalize_activity_event(event: dict[str, Any]) -> dict[str, Any]:
         "PushEvent": "Push",
         "PullRequestEvent": "Pull request",
         "IssuesEvent": "Issue",
-        "IssueCommentEvent": "Commento",
-        "CreateEvent": "Creazione",
+        "IssueCommentEvent": "Comment",
+        "CreateEvent": "Created",
         "ReleaseEvent": "Release",
         "ForkEvent": "Fork",
-        "WatchEvent": "Stella assegnata",
-        "PublicEvent": "Repository reso pubblico",
-        "DeleteEvent": "Riferimento eliminato",
+        "WatchEvent": "Starred",
+        "PublicEvent": "Repository made public",
+        "DeleteEvent": "Reference deleted",
     }.get(event_type, event_type.removesuffix("Event"))
     detail = repo
     if event_type == "PushEvent":
         size = payload.get("size", len(payload.get("commits") or []))
         detail = f"{repo} · {size} commit"
     elif event_type in {"PullRequestEvent", "IssuesEvent"}:
-        detail = f'{repo} · {payload.get("action", "aggiornato")}'
+        detail = f'{repo} · {payload.get("action", "updated")}'
     elif event_type == "CreateEvent":
-        detail = f'{repo} · {payload.get("ref_type", "risorsa")}'
+        detail = f'{repo} · {payload.get("ref_type", "resource")}'
     elif event_type == "ReleaseEvent":
         detail = f'{repo} · {(payload.get("release") or {}).get("tag_name", "release")}'
     return {
@@ -1138,19 +1481,19 @@ def build_activity(*, force: bool = False) -> dict[str, Any]:
             "progress": min(top_stars, 16),
             "target": 16,
             "detail": (
-                f'{top_starred["name"]}: {top_stars} stelle'
+                f'{top_starred["name"]}: {top_stars} stars'
                 if top_starred
-                else "Nessun repository rilevato"
+                else "No repositories detected"
             ),
-            "confidence": "alta",
+            "confidence": "high",
         },
         {
             "name": "Pull Shark",
             "status": "candidate" if merged_prs >= 2 else "progress",
             "progress": min(merged_prs, 2),
             "target": 2,
-            "detail": f"{merged_prs} pull request risultano unite",
-            "confidence": "media",
+            "detail": f"{merged_prs} merged pull requests found",
+            "confidence": "medium",
         },
         {
             "name": "Quickdraw",
@@ -1158,19 +1501,19 @@ def build_activity(*, force: bool = False) -> dict[str, Any]:
             "progress": 1 if quickdraw_candidates else 0,
             "target": 1,
             "detail": (
-                "Trovata una chiusura entro 5 minuti negli eventi recenti"
+                "Found an item closed within 5 minutes in recent events"
                 if quickdraw_candidates
-                else "Chiudi una issue o PR entro 5 minuti dalla creazione"
+                else "Close an issue or pull request within 5 minutes of creation"
             ),
-            "confidence": "media",
+            "confidence": "medium",
         },
         {
             "name": "Pair Extraordinaire",
             "status": "open",
             "progress": 0,
             "target": 1,
-            "detail": "I commit co-autori richiedono una verifica dedicata",
-            "confidence": "manuale",
+            "detail": "Co-authored commits require a dedicated check",
+            "confidence": "manual",
         },
     ]
     payload = {
@@ -1179,8 +1522,8 @@ def build_activity(*, force: bool = False) -> dict[str, Any]:
         "counts": counts,
         "achievements": achievements,
         "achievement_note": (
-            "Sono indicatori di idoneità, non una lettura ufficiale dei badge già "
-            "assegnati da GitHub."
+            "These are eligibility indicators, not an authoritative record of "
+            "achievements awarded by GitHub."
         ),
     }
     CACHE.set("activity", payload)
@@ -1351,7 +1694,7 @@ def build_csv_export(dataset: str) -> tuple[str, bytes]:
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    server_version = "GitHubPulse/2.0"
+    server_version = "GitHubPulse/2.1"
 
     def do_GET(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
         parsed = urlparse(self.path)
@@ -1367,6 +1710,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/signals":
             self.handle_api(build_signals)
+            return
+        if parsed.path == "/api/opportunities":
+            self.handle_api(
+                lambda: build_opportunity_center(
+                    force=query.get("refresh") == ["1"]
+                )
+            )
+            return
+        if parsed.path == "/api/compare":
+            self.handle_api(
+                lambda: build_repository_comparison(query.get("repos", []))
+            )
+            return
+        if parsed.path == "/api/digest":
+            self.handle_api(
+                lambda: build_weekly_digest(force=query.get("refresh") == ["1"])
+            )
             return
         if parsed.path == "/api/activity":
             self.handle_api(
@@ -1392,6 +1752,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/export":
             dataset = query.get("dataset", ["traffic"])[0]
+            if dataset == "digest":
+                body = build_weekly_digest()["markdown"].encode("utf-8")
+                self.send_download(
+                    body,
+                    "text/markdown; charset=utf-8",
+                    "github-pulse-weekly-digest.md",
+                )
+                return
             if dataset == "summary":
                 body = json.dumps(
                     build_export_payload(), ensure_ascii=False, indent=2
@@ -1402,7 +1770,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 return
             if dataset not in {"traffic", "movements"}:
                 self.send_json(
-                    {"error": "Dataset di esportazione non valido."},
+                    {"error": "Invalid export dataset."},
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return
@@ -1424,9 +1792,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 {
                     "started": started,
                     "message": (
-                        "Raccolta avviata."
+                        "Collection started."
                         if started
-                        else "Una raccolta è già in corso."
+                        else "A collection is already running."
                     ),
                     "collection": collection_status(),
                 },
@@ -1434,7 +1802,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             )
             return
         self.send_json(
-            {"error": "Endpoint non trovato."}, status=HTTPStatus.NOT_FOUND
+            {"error": "Endpoint not found."}, status=HTTPStatus.NOT_FOUND
         )
 
     def handle_api(self, callback: Any) -> None:
@@ -1446,7 +1814,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             )
         except Exception as exc:  # Keep the local UI usable and avoid a broken socket.
             self.send_json(
-                {"error": f"Errore inatteso: {exc}"},
+                {"error": f"Unexpected error: {exc}"},
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
@@ -1501,17 +1869,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Dashboard GitHub locale")
+    parser = argparse.ArgumentParser(description="Local-first GitHub dashboard")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--no-open", action="store_true", help="Non aprire il browser")
+    parser.add_argument("--no-open", action="store_true", help="Do not open the browser")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     if not shutil.which("gh"):
-        raise SystemExit("GitHub CLI (gh) non trovata nel PATH.")
+        raise SystemExit("GitHub CLI (gh) was not found in PATH.")
     account = get_account_login()
     ensure_database()
     threading.Thread(
@@ -1521,14 +1889,14 @@ def main() -> None:
     ).start()
     server = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
     url = f"http://{args.host}:{args.port}"
-    print(f"GitHub Pulse è disponibile su {url} per @{account}")
-    print("Premi Ctrl+C per arrestare il server.")
+    print(f"GitHub Pulse is available at {url} for @{account}")
+    print("Press Ctrl+C to stop the server.")
     if not args.no_open:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nArresto GitHub Pulse…")
+        print("\nStopping GitHub Pulse…")
     finally:
         server.server_close()
 
