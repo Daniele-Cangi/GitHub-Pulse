@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
-    <meta name="description" content="GitHub Pulse: segnali, traffico, rete e attività GitHub in un'unica dashboard locale." />
+    <meta name="description" content="GitHub Pulse turns repository traffic, stars, activity and community changes into useful signals in one local-first dashboard." />
     <title>GitHub Pulse · Control center</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
@@ -21,33 +21,36 @@
           <span>GitHub <strong>Pulse</strong></span>
         </a>
 
-        <nav class="main-nav" aria-label="Sezioni principali">
+        <nav class="main-nav" aria-label="Primary navigation">
           <button class="nav-item active" data-view="overview" type="button">
-            <span class="nav-icon">⌁</span><span>Panoramica</span>
+            <span class="nav-icon">⌁</span><span>Overview</span>
           </button>
           <button class="nav-item" data-view="repositories" type="button">
-            <span class="nav-icon">◫</span><span>Repository</span>
+            <span class="nav-icon">◫</span><span>Repositories</span>
+          </button>
+          <button class="nav-item" data-view="insights" type="button">
+            <span class="nav-icon">✦</span><span>Insights</span>
           </button>
           <button class="nav-item" data-view="network" type="button">
-            <span class="nav-icon">◎</span><span>Rete</span>
+            <span class="nav-icon">◎</span><span>Network</span>
           </button>
           <button class="nav-item" data-view="activity" type="button">
-            <span class="nav-icon">↗</span><span>Attività</span>
+            <span class="nav-icon">↗</span><span>Activity</span>
           </button>
           <button class="nav-item" data-view="data" type="button">
-            <span class="nav-icon">⋮</span><span>Dati e privacy</span>
+            <span class="nav-icon">⋮</span><span>Data &amp; privacy</span>
           </button>
         </nav>
 
         <div class="sidebar-collector">
-          <div class="collector-title"><i></i><span>Raccolta automatica</span></div>
-          <p id="sidebarCollectorText">Controllo stato…</p>
+          <div class="collector-title"><i></i><span>Automatic collection</span></div>
+          <p id="sidebarCollectorText">Checking status…</p>
           <div class="collector-track"><span id="sidebarCollectorProgress"></span></div>
         </div>
 
         <div class="sidebar-foot">
-          <span class="secure-pill"><i></i> Locale · gh keyring</span>
-          <small>GitHub Pulse 2.0</small>
+          <span class="secure-pill"><i></i> Local · gh keyring</span>
+          <small>GitHub Pulse 2.1</small>
         </div>
       </aside>
 
@@ -55,13 +58,13 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">Control center</p>
-            <h1 id="pageTitle">Panoramica</h1>
+            <h1 id="pageTitle">Overview</h1>
           </div>
           <div class="top-actions">
-            <span id="signalBadge" class="signal-badge">— segnali</span>
+            <span id="signalBadge" class="signal-badge">— signals</span>
             <button id="refreshButton" class="button button-primary" type="button">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.5 9A7 7 0 0 0 6.2 6.2L4 9m16 6-2.2 2.8A7 7 0 0 1 5.5 15" /></svg>
-              Raccogli ora
+              Collect now
             </button>
           </div>
         </header>
@@ -72,20 +75,20 @@
           <section id="overviewView" class="view-panel active">
             <section id="profileHero" class="profile-hero skeleton-block">
               <div class="hero-copy">
-                <p class="eyebrow">Account GitHub</p>
-                <h2>Sto leggendo il tuo ecosistema…</h2>
-                <p>I dati restano sul tuo computer.</p>
+                <p class="eyebrow">GitHub account</p>
+                <h2>Reading your ecosystem…</h2>
+                <p>Your data stays on your computer.</p>
               </div>
             </section>
 
             <div class="section-heading">
               <div>
-                <p class="eyebrow">Ultimi 7 giorni</p>
-                <h2>I segnali che contano</h2>
+                <p class="eyebrow">Last 7 days</p>
+                <h2>Signals that matter</h2>
               </div>
-              <p>Copertura, interesse, validazione e community in un solo colpo d’occhio.</p>
+              <p>Reach, intent, validation and community at a glance.</p>
             </div>
-            <section id="signalGrid" class="signal-grid" aria-label="Segnali principali">
+            <section id="signalGrid" class="signal-grid" aria-label="Primary signals">
               <article class="signal-card loading-card"></article>
               <article class="signal-card loading-card"></article>
               <article class="signal-card loading-card"></article>
@@ -95,21 +98,21 @@
             <div class="overview-grid">
               <article class="panel-card ranking-card">
                 <div class="card-heading">
-                  <div><p class="eyebrow">Momentum</p><h3>Repository in evidenza</h3></div>
-                  <button class="text-button" data-go-view="repositories" type="button">Vedi tutti →</button>
+                  <div><p class="eyebrow">Momentum</p><h3>Featured repositories</h3></div>
+                  <button class="text-button" data-go-view="repositories" type="button">View all →</button>
                 </div>
                 <div id="overviewRanking" class="ranking-list">
-                  <div class="data-empty">Calcolo dei segnali in corso…</div>
+                  <div class="data-empty">Calculating signals…</div>
                 </div>
               </article>
 
               <article class="panel-card notification-card">
                 <div class="card-heading">
-                  <div><p class="eyebrow">Pulse feed</p><h3>Cosa sta succedendo</h3></div>
+                  <div><p class="eyebrow">Pulse feed</p><h3>What is happening</h3></div>
                   <span id="notificationCount" class="count-pill">0</span>
                 </div>
                 <div id="notificationList" class="notification-list">
-                  <div class="data-empty">Analizzo i cambiamenti recenti…</div>
+                  <div class="data-empty">Analyzing recent changes…</div>
                 </div>
               </article>
             </div>
@@ -117,103 +120,182 @@
 
           <section id="repositoriesView" class="view-panel">
             <div class="section-heading">
-              <div><p class="eyebrow">Radar portfolio</p><h2>Tutti i repository</h2></div>
-              <p id="repositoryMeta">Prestazioni, interesse e segnali di crescita.</p>
+              <div><p class="eyebrow">Portfolio radar</p><h2>All repositories</h2></div>
+              <p id="repositoryMeta">Performance, intent and growth signals.</p>
             </div>
 
             <article class="panel-card repo-radar-card">
               <div class="table-head repo-row">
-                <span>Repository</span><span>Visite uniche</span><span>Cloner</span><span>Stelle</span><span>Pulse</span>
+                <span>Repository</span><span>Unique visitors</span><span>Unique cloners</span><span>Stars</span><span>Pulse</span>
               </div>
               <div id="repositoryRadar" class="repo-table">
-                <div class="data-empty">Caricamento repository…</div>
+                <div class="data-empty">Loading repositories…</div>
               </div>
             </article>
 
             <div class="section-heading traffic-heading">
-              <div><p class="eyebrow">14 giorni + storico locale</p><h2>Analisi dettagliata</h2></div>
+              <div><p class="eyebrow">14 days + local history</p><h2>Detailed analytics</h2></div>
               <label class="repo-select-wrap">
                 <span>Repository</span>
-                <select id="repoSelect" disabled><option>Caricamento…</option></select>
+                <select id="repoSelect" disabled><option>Loading…</option></select>
               </label>
             </div>
 
             <div id="trafficEmpty" class="empty-state">
               <span class="empty-icon">↗</span>
-              <h3>Scegli un repository</h3>
-              <p>Vedrai visite, cloni, fonti, pagine e timeline delle stelle.</p>
+              <h3>Choose a repository</h3>
+              <p>Explore views, clones, referrers, popular pages and the star timeline.</p>
             </div>
 
             <div id="trafficContent" class="hidden">
               <div class="mini-stat-grid">
-                <article><span>Visualizzazioni</span><strong id="viewsCount">—</strong></article>
-                <article><span>Visitatori unici</span><strong id="uniqueViewsCount">—</strong></article>
-                <article><span>Cloni</span><strong id="clonesCount">—</strong></article>
-                <article><span>Cloner unici</span><strong id="uniqueClonesCount">—</strong></article>
+                <article><span>Views</span><strong id="viewsCount">—</strong></article>
+                <article><span>Unique visitors</span><strong id="uniqueViewsCount">—</strong></article>
+                <article><span>Clones</span><strong id="clonesCount">—</strong></article>
+                <article><span>Unique cloners</span><strong id="uniqueClonesCount">—</strong></article>
               </div>
 
               <div class="chart-card">
                 <div class="chart-heading">
-                  <div><h3>Andamento visite</h3><p id="chartSubtitle">Dati giornalieri</p></div>
-                  <div class="legend"><span class="views-dot"></span>Visite <span class="unique-dot"></span>Uniche</div>
+                  <div><h3>Traffic trend</h3><p id="chartSubtitle">Daily data</p></div>
+                  <div class="legend"><span class="views-dot"></span>Views <span class="unique-dot"></span>Unique</div>
                 </div>
                 <div id="trafficChart" class="chart"></div>
               </div>
 
               <div class="traffic-tables">
                 <article class="data-card">
-                  <div class="data-card-title"><h3>Provenienza</h3><span>Top referrer</span></div>
+                  <div class="data-card-title"><h3>Traffic sources</h3><span>Top referrers</span></div>
                   <div id="referrerList" class="data-list"></div>
                 </article>
                 <article class="data-card">
-                  <div class="data-card-title"><h3>Contenuti popolari</h3><span>Top pagine</span></div>
+                  <div class="data-card-title"><h3>Popular content</h3><span>Top pages</span></div>
                   <div id="pathList" class="data-list"></div>
                 </article>
                 <article class="data-card star-card">
-                  <div class="data-card-title"><h3>Nuove stelle</h3><span id="starCount">Timeline</span></div>
+                  <div class="data-card-title"><h3>New stars</h3><span id="starCount">Timeline</span></div>
                   <div id="starTimeline" class="star-list"></div>
                 </article>
               </div>
             </div>
           </section>
 
-          <section id="networkView" class="view-panel">
+          <section id="insightsView" class="view-panel">
             <div class="section-heading">
-              <div><p class="eyebrow">Community</p><h2>Rete e relazioni</h2></div>
-              <p>Follower, seguiti e cambiamenti sono ora una sezione del control center.</p>
+              <div><p class="eyebrow">Opportunity Center</p><h2>Turn signals into action</h2></div>
+              <p>Prioritized recommendations built from repository traffic, momentum and project readiness.</p>
             </div>
 
-            <section class="stat-grid" aria-label="Statistiche relazioni">
-              <article class="stat-card lime"><span>Follower</span><strong id="followersCount">—</strong><small id="followersDelta">nessun confronto</small></article>
-              <article class="stat-card blue"><span>Seguiti</span><strong id="followingCount">—</strong><small>account seguiti</small></article>
-              <article class="stat-card violet"><span>Reciproci</span><strong id="mutualCount">—</strong><small>follow reciproco</small></article>
-              <article class="stat-card coral"><span>Non ricambiano</span><strong id="notBackCount">—</strong><small>li segui soltanto tu</small></article>
+            <section id="opportunitySummary" class="insight-summary" aria-label="Opportunity summary">
+              <article><span>Opportunities</span><strong>—</strong><small>actionable signals</small></article>
+              <article><span>High priority</span><strong>—</strong><small>review first</small></article>
+              <article><span>Portfolio health</span><strong>—</strong><small>average score</small></article>
+              <article><span>Repositories</span><strong>—</strong><small>analyzed locally</small></article>
+            </section>
+
+            <div class="insights-grid">
+              <article class="panel-card opportunity-card">
+                <div class="card-heading">
+                  <div><p class="eyebrow">Recommended actions</p><h3>Best next moves</h3></div>
+                  <span id="opportunityCount" class="count-pill">0</span>
+                </div>
+                <div id="opportunityList" class="opportunity-list">
+                  <div class="data-empty">Analyzing portfolio opportunities…</div>
+                </div>
+              </article>
+
+              <article class="panel-card health-card">
+                <div class="card-heading">
+                  <div><p class="eyebrow">Repository health</p><h3>Needs attention</h3></div>
+                </div>
+                <div id="healthList" class="health-list">
+                  <div class="data-empty">Calculating health scores…</div>
+                </div>
+              </article>
+            </div>
+
+            <div class="section-heading">
+              <div><p class="eyebrow">Side by side</p><h2>Repository comparison</h2></div>
+              <p>Compare reach, clone intent, validation and momentum using the same local history.</p>
+            </div>
+
+            <article class="panel-card comparison-card">
+              <div class="comparison-controls">
+                <label><span>Repository A</span><select id="compareRepoA" disabled><option>Loading…</option></select></label>
+                <span class="compare-versus">vs</span>
+                <label><span>Repository B</span><select id="compareRepoB" disabled><option>Loading…</option></select></label>
+                <button id="compareButton" class="button button-primary" type="button" disabled>Compare</button>
+              </div>
+              <div id="comparisonResult" class="comparison-result">
+                <div class="data-empty">Choose two repositories to compare their current signals.</div>
+              </div>
+            </article>
+
+            <div class="section-heading">
+              <div><p class="eyebrow">Weekly intelligence</p><h2>Digest &amp; alerts</h2></div>
+              <p>A portable summary for sharing, plus optional desktop notifications for important changes.</p>
+            </div>
+
+            <div class="digest-grid">
+              <article class="panel-card digest-card">
+                <div class="card-heading">
+                  <div><p class="eyebrow" id="digestPeriod">Last 7 days</p><h3>Weekly digest</h3></div>
+                  <div class="digest-actions">
+                    <button id="copyDigestButton" class="button button-secondary" type="button">Copy Markdown</button>
+                    <a class="button button-secondary" href="/api/export?dataset=digest">Download .md</a>
+                  </div>
+                </div>
+                <div id="digestPreview" class="digest-preview">
+                  <div class="data-empty">Building the weekly digest…</div>
+                </div>
+              </article>
+
+              <article class="panel-card alert-card">
+                <div class="card-heading"><div><p class="eyebrow">Local notifications</p><h3>Desktop alerts</h3></div></div>
+                <p>Receive a local notification when GitHub Pulse detects important traffic, star or community changes.</p>
+                <button id="desktopAlertsButton" class="button button-primary" type="button">Enable desktop alerts</button>
+                <small id="desktopAlertsStatus">Disabled · nothing leaves your computer</small>
+              </article>
+            </div>
+          </section>
+
+          <section id="networkView" class="view-panel">
+            <div class="section-heading">
+              <div><p class="eyebrow">Community</p><h2>Network &amp; relationships</h2></div>
+              <p>Followers, following and relationship changes in one dedicated workspace.</p>
+            </div>
+
+            <section class="stat-grid" aria-label="Relationship statistics">
+              <article class="stat-card lime"><span>Followers</span><strong id="followersCount">—</strong><small id="followersDelta">no comparison yet</small></article>
+              <article class="stat-card blue"><span>Following</span><strong id="followingCount">—</strong><small>accounts you follow</small></article>
+              <article class="stat-card violet"><span>Mutuals</span><strong id="mutualCount">—</strong><small>mutual follows</small></article>
+              <article class="stat-card coral"><span>Not following back</span><strong id="notBackCount">—</strong><small>only you follow them</small></article>
             </section>
 
             <div class="network-grid">
               <article class="panel-card movements-card">
-                <div class="card-heading"><div><p class="eyebrow">Cronologia</p><h3>Movimenti recenti</h3></div></div>
+                <div class="card-heading"><div><p class="eyebrow">Timeline</p><h3>Recent changes</h3></div></div>
                 <div id="movementList" class="movement-list">
-                  <div class="data-empty">Il confronto inizierà dal prossimo aggiornamento.</div>
+                  <div class="data-empty">Comparison starts with the next update.</div>
                 </div>
               </article>
 
               <article class="panel-card relationships-card">
                 <div class="panel-heading">
-                  <div><p class="eyebrow">Esplora rete</p><h3>Chi segue chi</h3></div>
+                  <div><p class="eyebrow">Explore network</p><h3>Who follows whom</h3></div>
                   <label class="search-box">
-                    <span class="sr-only">Cerca utente</span>
-                    <input id="relationshipSearch" type="search" placeholder="Cerca username…" autocomplete="off" />
+                    <span class="sr-only">Search users</span>
+                    <input id="relationshipSearch" type="search" placeholder="Search usernames…" autocomplete="off" />
                   </label>
                 </div>
                 <div id="relationshipFilters" class="filter-row" role="tablist">
-                  <button class="filter active" data-filter="not_following_back" type="button">Non ricambiano <span>—</span></button>
-                  <button class="filter" data-filter="followers_not_followed" type="button">Da ricambiare <span>—</span></button>
-                  <button class="filter" data-filter="mutual" type="button">Reciproci <span>—</span></button>
-                  <button class="filter" data-filter="followers" type="button">Follower <span>—</span></button>
-                  <button class="filter" data-filter="following" type="button">Seguiti <span>—</span></button>
+                  <button class="filter active" data-filter="not_following_back" type="button">Not following back <span>—</span></button>
+                  <button class="filter" data-filter="followers_not_followed" type="button">Follow back <span>—</span></button>
+                  <button class="filter" data-filter="mutual" type="button">Mutuals <span>—</span></button>
+                  <button class="filter" data-filter="followers" type="button">Followers <span>—</span></button>
+                  <button class="filter" data-filter="following" type="button">Following <span>—</span></button>
                 </div>
-                <div class="list-meta"><span id="relationshipResultCount">Caricamento…</span><span>Apri il profilo su GitHub ↗</span></div>
+                <div class="list-meta"><span id="relationshipResultCount">Loading…</span><span>Open profile on GitHub ↗</span></div>
                 <div id="relationshipList" class="user-grid" aria-live="polite"></div>
               </article>
             </div>
@@ -221,18 +303,18 @@
 
           <section id="activityView" class="view-panel">
             <div class="section-heading">
-              <div><p class="eyebrow">Attività pubblica</p><h2>Attività e achievement lab</h2></div>
-              <p>Una lettura pratica degli eventi recenti e dei badge avvicinabili.</p>
+              <div><p class="eyebrow">Public activity</p><h2>Activity &amp; Achievement Lab</h2></div>
+              <p>A practical view of recent events and achievements within reach.</p>
             </div>
             <div id="activitySummary" class="activity-summary"></div>
             <div class="activity-grid">
               <article class="panel-card">
-                <div class="card-heading"><div><p class="eyebrow">Ultimi 30 giorni</p><h3>Timeline attività</h3></div></div>
-                <div id="activityList" class="activity-list"><div class="data-empty">Caricamento attività…</div></div>
+                <div class="card-heading"><div><p class="eyebrow">Last 30 days</p><h3>Activity timeline</h3></div></div>
+                <div id="activityList" class="activity-list"><div class="data-empty">Loading activity…</div></div>
               </article>
               <article class="panel-card">
-                <div class="card-heading"><div><p class="eyebrow">Stime</p><h3>Achievement lab</h3></div></div>
-                <div id="achievementGrid" class="achievement-list"><div class="data-empty">Calcolo dei candidati…</div></div>
+                <div class="card-heading"><div><p class="eyebrow">Estimates</p><h3>Achievement Lab</h3></div></div>
+                <div id="achievementGrid" class="achievement-list"><div class="data-empty">Calculating candidates…</div></div>
                 <p id="achievementNote" class="fine-print"></p>
               </article>
             </div>
@@ -240,40 +322,40 @@
 
           <section id="dataView" class="view-panel">
             <div class="section-heading">
-              <div><p class="eyebrow">Controllo locale</p><h2>Dati, raccolta e privacy</h2></div>
-              <p>Storico automatico, export aperti e nessuna credenziale nel browser.</p>
+              <div><p class="eyebrow">Local control</p><h2>Data, collection &amp; privacy</h2></div>
+              <p>Automatic history, open exports and no credentials in the browser.</p>
             </div>
 
             <div class="data-control-grid">
               <article class="panel-card collection-card">
-                <div class="card-heading"><div><p class="eyebrow">Scheduler</p><h3>Raccolta giornaliera</h3></div><span id="collectionStatusPill" class="status-pill">—</span></div>
-                <p id="collectionDescription">Controllo dello stato della raccolta…</p>
+                <div class="card-heading"><div><p class="eyebrow">Scheduler</p><h3>Daily collection</h3></div><span id="collectionStatusPill" class="status-pill">—</span></div>
+                <p id="collectionDescription">Checking collection status…</p>
                 <div class="progress-row"><div class="progress-track"><span id="collectionProgress"></span></div><strong id="collectionProgressText">—</strong></div>
-                <button id="collectDataButton" class="button button-primary" type="button">Avvia raccolta completa</button>
+                <button id="collectDataButton" class="button button-primary" type="button">Start full collection</button>
               </article>
 
               <article class="panel-card export-card">
-                <div class="card-heading"><div><p class="eyebrow">Portabilità</p><h3>Esporta i tuoi dati</h3></div></div>
-                <p>Scarica lo storico raccolto da GitHub Pulse in formati leggibili.</p>
+                <div class="card-heading"><div><p class="eyebrow">Portability</p><h3>Export your data</h3></div></div>
+                <p>Download the history collected by GitHub Pulse in readable formats.</p>
                 <div class="export-actions">
-                  <a class="button button-secondary" href="/api/export?dataset=traffic">Traffico CSV</a>
-                  <a class="button button-secondary" href="/api/export?dataset=movements">Movimenti CSV</a>
+                  <a class="button button-secondary" href="/api/export?dataset=traffic">Traffic CSV</a>
+                  <a class="button button-secondary" href="/api/export?dataset=movements">Movements CSV</a>
                   <a class="button button-secondary" href="/api/export?dataset=summary">Backup JSON</a>
                 </div>
               </article>
             </div>
 
             <div class="about-grid">
-              <article class="about-card"><span class="about-number">01</span><h3>Nessun token nell’app</h3><p>Le richieste passano attraverso GitHub CLI e il keyring di Windows. Il browser non vede mai le credenziali.</p></article>
-              <article class="about-card"><span class="about-number">02</span><h3>Storico oltre 14 giorni</h3><p>GitHub Pulse salva ogni giornata in SQLite e rinnova automaticamente i dati quando il server è in esecuzione.</p></article>
-              <article class="about-card warning-card"><span class="about-number">!</span><h3>Limiti GitHub</h3><p>Non esistono visite uniche del profilo né identità dei cloner. I tassi mostrati sono segnali indicativi, non conversioni individuali.</p></article>
+              <article class="about-card"><span class="about-number">01</span><h3>No tokens in the app</h3><p>Requests flow through GitHub CLI and the OS keyring. The browser never sees your credentials.</p></article>
+              <article class="about-card"><span class="about-number">02</span><h3>History beyond 14 days</h3><p>GitHub Pulse stores daily snapshots in SQLite and refreshes them automatically while the server is running.</p></article>
+              <article class="about-card warning-card"><span class="about-number">!</span><h3>GitHub limitations</h3><p>Profile unique visitors and clone identities are not available. The rates shown are directional signals, not individual conversions.</p></article>
             </div>
           </section>
         </main>
 
         <footer>
-          <span>GitHub Pulse · dati locali</span>
-          <span id="lastUpdated">Non ancora aggiornato</span>
+          <span>GitHub Pulse · local data</span>
+          <span id="lastUpdated">Not updated yet</span>
         </footer>
       </div>
     </div>
