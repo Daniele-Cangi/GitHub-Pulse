@@ -7,8 +7,8 @@
   --line: rgba(255, 255, 255, 0.085);
   --line-strong: rgba(255, 255, 255, 0.14);
   --text: #f4f7f8;
-  --muted: #8894a1;
-  --muted-2: #65717e;
+  --muted: #a4aeba;
+  --muted-2: #7f8a97;
   --lime: #b8f33d;
   --blue: #58a6ff;
   --violet: #b084ff;
@@ -354,6 +354,50 @@ main { width: min(1380px, 100%); margin: 0 auto; padding: 36px clamp(24px, 4vw, 
 .about-card { min-height: 220px; padding: 23px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }.about-number { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: var(--lime); background: rgba(184,243,61,.065); font-size: 9px; font-weight: 750; }.about-card h3 { margin: 38px 0 9px; font-size: 14px; }.about-card p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }.warning-card .about-number { color: var(--coral); background: rgba(255,123,114,.075); }
 
 footer { display: flex; justify-content: space-between; margin: 0 clamp(24px, 4vw, 58px); padding: 22px 0 34px; border-top: 1px solid var(--line); color: var(--muted-2); font-size: 8px; }
+
+/* Readability scale: keep the dense dashboard layout without micro-text. */
+body { font-size: 14px; line-height: 1.45; }
+.nav-item, .button, .hero-link, .error-banner { font-size: 14px; }
+.collector-title, .eyebrow, .signal-badge, .count-pill, .status-pill,
+.table-head, .data-card-title span, .list-meta, .priority-pill,
+.comparison-controls label span, .compare-versus, .digest-block h4,
+.about-number, footer { font-size: 11px; }
+.sidebar-collector p, .secure-pill, .sidebar-foot small,
+.hero-metrics, .signal-card p, .delta, .rank-copy small,
+.notification-row small, .quiet-state p, .repo-data-row small,
+.repo-select-wrap, .mini-stat-grid span, .chart-heading p, .legend,
+.data-row, .star-list strong, .stat-card small, .movement-row strong,
+.movement-row small, .filter, .user-copy small, .activity-summary span,
+.activity-summary small, .activity-row small, .achievement-head small,
+.achievement-head b, .achievement-row p, .fine-print,
+.insight-summary span, .insight-summary small, .opportunity-copy small,
+.opportunity-copy em, .health-row small, .comparison-metric span,
+.digest-summary span, .digest-summary small, .digest-line small,
+.digest-line > b, .alert-card > small, .progress-row strong {
+  font-size: 12px;
+}
+.section-heading > p, .signal-card h3, .rank-copy strong, .rank-score,
+.notification-row strong, .quiet-state strong, .repo-data-row strong,
+.pulse-score, .empty-state p, .data-empty, .stat-card > span,
+.search-box input, .user-copy strong, .no-results, .activity-row strong,
+.achievement-head strong, .opportunity-copy strong, .opportunity-metric,
+.health-head strong, .health-score, .comparison-metric b,
+.digest-line strong, .alert-card p, .collection-card > p,
+.export-card > p, .about-card p {
+  font-size: 13px;
+}
+.topbar h1 { font-size: 22px; }
+.section-heading h2 { font-size: 28px; }
+.card-heading h3, .data-card-title h3, .chart-heading h3,
+.panel-heading h3, .about-card h3 { font-size: 17px; }
+.comparison-repo header a { font-size: 15px; }
+.comparison-repo header strong { font-size: 13px; }
+.digest-summary strong { font-size: 21px; }
+.chart-label { font-size: 11px; }
+.star-list small, .activity-row time { font-size: 11px; }
+.section-heading > p, .opportunity-copy small, .health-row small,
+.digest-line small, .movement-row small { line-height: 1.55; }
+
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .skeleton-block { background: linear-gradient(100deg, var(--surface) 25%, rgba(255,255,255,.05) 40%, var(--surface) 60%); background-size: 220% 100%; animation: shimmer 1.7s linear infinite; }
@@ -387,11 +431,11 @@ footer { display: flex; justify-content: space-between; margin: 0 clamp(24px, 4v
 
 @media (max-width: 620px) {
   .nav-item span:last-child { display: none; }.nav-item { padding-inline: 12px; }
-  .topbar { padding: 13px 15px; }.topbar h1 { font-size: 17px; }.signal-badge { display: none; }
+  .topbar { padding: 13px 15px; }.topbar h1 { font-size: 19px; }.signal-badge { display: none; }
   .button { padding: 9px 11px; }
   main { padding: 22px 14px 30px; }
   .profile-hero { min-height: 160px; padding: 23px; }.hero-profile { align-items: start; gap: 14px; }.hero-profile img { width: 58px; height: 58px; border-radius: 16px; }.hero-copy h2 { font-size: 26px; }.hero-copy > p:not(.eyebrow) { max-width: 220px; }.hero-link { display: none; }.hero-metrics { gap: 9px; margin-top: 16px; }.hero-metrics span { flex-basis: 40%; }
-  .section-heading { align-items: start; flex-direction: column; gap: 7px; margin-top: 32px; }.section-heading > p { text-align: left; }.section-heading h2 { font-size: 21px; }
+  .section-heading { align-items: start; flex-direction: column; gap: 7px; margin-top: 32px; }.section-heading > p { text-align: left; }.section-heading h2 { font-size: 24px; }
   .signal-grid, .stat-grid, .activity-summary, .insight-summary { grid-template-columns: repeat(2, 1fr); gap: 8px; }.signal-card { min-height: 155px; padding: 16px; }.signal-card > strong { font-size: 29px; }
   .ranking-row { grid-template-columns: 25px minmax(120px,1fr) 25px; }.rank-bar { display: none; }
   .panel-card { padding: 17px; }
