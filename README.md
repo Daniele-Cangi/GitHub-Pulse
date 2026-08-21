@@ -29,12 +29,15 @@ There is no username to configure and no token to paste into the app.
 | --- | --- |
 | **Overview** | Reach, interest, validation, community trends and important signals |
 | **Repositories** | Portfolio ranking, unique visitors, clones, referrers and popular pages |
+| **Insights** | Prioritized opportunities, repository comparison, weekly digest and local alerts |
 | **Stars** | Timestamped stargazer timeline for repositories you can access |
 | **Network** | Followers, following, mutual relationships and changes over time |
 | **Activity** | Recent public events and an experimental Achievement Lab |
 | **Data** | Daily collection status, CSV exports and a complete JSON backup |
 
 ![GitHub Pulse repository radar](docs/screenshots/repositories.png)
+
+![GitHub Pulse opportunity center and weekly digest](docs/screenshots/insights.png)
 
 ## Designed for every GitHub account
 
@@ -71,6 +74,31 @@ git clone https://github.com/Daniele-Cangi/GitHub-Pulse.git
 cd GitHub-Pulse
 ~~~
 
+### Windows installer
+
+Install GitHub Pulse for the current Windows user:
+
+~~~powershell
+.\install.ps1
+~~~
+
+You can also double-click <code>install.cmd</code>.
+
+The installer creates a Start menu shortcut and copies the application to
+<code>%LOCALAPPDATA%\GitHubPulse</code>. Re-running it updates the application
+without overwriting the local SQLite history.
+
+To remove the application while keeping your history:
+
+~~~powershell
+& "$env:LOCALAPPDATA\GitHubPulse\uninstall.ps1"
+~~~
+
+Pass <code>-RemoveData</code> only if you also want to delete the collected
+history.
+
+### Run from source
+
 Verify the active GitHub account:
 
 ~~~powershell
@@ -86,7 +114,7 @@ python app.py
 On Windows you can also double-click <code>start.cmd</code> or run:
 
 ~~~powershell
-.start.ps1
+.\start.ps1
 ~~~
 
 GitHub Pulse opens at [http://127.0.0.1:8765](http://127.0.0.1:8765). Press
@@ -99,16 +127,20 @@ persists every available day in SQLite, building a history that can extend
 beyond GitHub's window.
 
 While the server is running, a complete collection starts when the previous one
-is more than 20 hours old. You can also start it manually with **Raccogli ora**.
+is more than 20 hours old. You can also start it manually with **Collect now**.
 Non-archived repositories are processed sequentially to keep API usage
 predictable.
-
-The interface is currently in Italian; account detection and stored data are
-fully account-independent.
 
 Follower and following lists do not include timestamps. GitHub Pulse therefore
 creates a baseline on first run and records additions or removals from subsequent
 snapshots.
+
+The **Opportunity Center** combines these historical signals with repository
+readiness checks. Recommendations are heuristics: they highlight likely next
+actions, while leaving the final decision to you.
+
+The **Weekly Digest** can be copied or downloaded as Markdown. Desktop alerts
+use the browser's local notification permission and are disabled by default.
 
 ## Privacy and security
 
@@ -116,7 +148,7 @@ snapshots.
 - Tokens never enter the browser or the SQLite database.
 - Authentication remains in the operating system keyring managed by GitHub CLI.
 - Collected databases are ignored by Git and stay on the local machine.
-- CSV and JSON exports are generated only when requested.
+- CSV, JSON and Markdown exports are generated only when requested.
 
 ## GitHub API limits
 
@@ -164,10 +196,16 @@ GET  /api/health
 GET  /api/dashboard
 GET  /api/signals
 GET  /api/activity
+GET  /api/opportunities
+GET  /api/compare?repos=OWNER/REPO&repos=OWNER/OTHER
+GET  /api/digest
 GET  /api/traffic?repo=OWNER/REPO
 POST /api/collect
 GET  /api/export?dataset=summary
 ~~~
+
+The [v2.0.0 release](https://github.com/Daniele-Cangi/GitHub-Pulse/releases/tag/v2.0.0)
+preserves the stable dashboard baseline from before the Insights expansion.
 
 ## License
 
